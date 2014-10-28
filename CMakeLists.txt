@@ -12,39 +12,33 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # 3. If any interfaces have been added since the last public release, then increment age.
 # 4. If any interfaces have been removed since the last public release, then set age to 0.
 
-set(RMQ_SOVERSION_CURRENT   3)
-set(RMQ_SOVERSION_REVISION  3)
-set(RMQ_SOVERSION_AGE       2)
+set(RMQ2_SOVERSION_CURRENT   0)
+set(RMQ2_SOVERSION_REVISION  0)
+set(RMQ2_SOVERSION_AGE       0)
 
-math(EXPR RMQ_SOVERSION_MAJOR "${RMQ_SOVERSION_CURRENT} - ${RMQ_SOVERSION_AGE}")
-math(EXPR RMQ_SOVERSION_MINOR "${RMQ_SOVERSION_AGE}")
-math(EXPR RMQ_SOVERSION_PATCH "${RMQ_SOVERSION_REVISION}")
+math(EXPR RMQ2_SOVERSION_MAJOR "${RMQ2_SOVERSION_CURRENT} - ${RMQ2_SOVERSION_AGE}")
+math(EXPR RMQ2_SOVERSION_MINOR "${RMQ2_SOVERSION_AGE}")
+math(EXPR RMQ2_SOVERSION_PATCH "${RMQ2_SOVERSION_REVISION}")
 
-set(RMQ_VERSION ${RMQ_SOVERSION_MAJOR}.${RMQ_SOVERSION_MINOR}.${RMQ_SOVERSION_PATCH})
-set(RMQ_SOVERSION ${RMQ_SOVERSION_MAJOR})
+set(RMQ2_VERSION ${RMQ2_SOVERSION_MAJOR}.${RMQ2_SOVERSION_MINOR}.${RMQ2_SOVERSION_PATCH})
+set(RMQ2_SOVERSION ${RMQ2_SOVERSION_MAJOR})
 
-file(STRINGS librabbitmq/amqp.h _API_VERSION_MAJOR REGEX "^#define AMQP_VERSION_MAJOR [0-9]+$")
-file(STRINGS librabbitmq/amqp.h _API_VERSION_MINOR REGEX "^#define AMQP_VERSION_MINOR [0-9]+$")
-file(STRINGS librabbitmq/amqp.h _API_VERSION_PATCH REGEX "^#define AMQP_VERSION_PATCH [0-9]+$")
+file(STRINGS rmq2/version.h _API_VERSION_MAJOR REGEX "^#define RMQ2_VERSION_MAJOR [0-9]+$")
+file(STRINGS rmq2/version.h _API_VERSION_MINOR REGEX "^#define RMQ2_VERSION_MINOR [0-9]+$")
+file(STRINGS rmq2/version.h _API_VERSION_PATCH REGEX "^#define RMQ2_VERSION_PATCH [0-9]+$")
 
 string(REGEX MATCH "[0-9]+" _API_VERSION_MAJOR ${_API_VERSION_MAJOR})
 string(REGEX MATCH "[0-9]+" _API_VERSION_MINOR ${_API_VERSION_MINOR})
 string(REGEX MATCH "[0-9]+" _API_VERSION_PATCH ${_API_VERSION_PATCH})
 
-# VERSION to match what is in autotools
-set(VERSION ${_API_VERSION_MAJOR}.${_API_VERSION_MINOR}.${_API_VERSION_PATCH})
+set(RMQ2_API_VERSION ${_API_VERSION_MAJOR}.${_API_VERSION_MINOR}.${_API_VERSION_PATCH})
 
 if (MSVC)
-  set(CMAKE_C_FLAGS "/W4 /nologo ${CMAKE_C_FLAGS}")
+  message(INFO "MSVC support isn't enabled yet.")
 elseif (CMAKE_C_COMPILER_ID MATCHES ".*Clang")
-  set(CMAKE_C_FLAGS "-Wall -Wextra -pedantic -Wstrict-prototypes -Wcast-align -Wno-unused-function -fno-common -fvisibility=hidden")
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -std=c++11 -fvisibility=hidden")
 elseif (CMAKE_COMPILER_IS_GNUCC)
-  set(RMQ_C_FLAGS "-Wall -Wextra -pedantic -Wstrict-prototypes -Wcast-align -Wno-unused-function -fno-common")
-  execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-  if (GCC_VERSION VERSION_GREATER 4.0 OR GCC_VERSION VERSION_EQUAL 4.0)
-      set(RMQ_C_FLAGS "${RMQ_C_FLAGS} -fvisibility=hidden")
-  endif()
-  set(CMAKE_C_FLAGS "${RMQ_C_FLAGS} ${CMAKE_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -std=c++11 -fvisibility=hidden")
 endif ()
 
 if (CMAKE_GENERATOR MATCHES ".*(Make|Ninja).*"
@@ -53,66 +47,12 @@ if (CMAKE_GENERATOR MATCHES ".*(Make|Ninja).*"
   message(STATUS "CMAKE_BUILD_TYPE not specified. Creating ${CMAKE_BUILD_TYPE} build")
 endif()
 
-include(TestCInline)
 include(CheckFunctionExists)
 include(CheckSymbolExists)
 include(CheckLibraryExists)
 include(CMakePushCheckState)
 include(GNUInstallDirs)
 
-# Detect if we need to link against a socket library:
-cmake_push_check_state()
-if (WIN32)
-  # Always use WinSock2 on Windows
-  set(SOCKET_LIBRARIES ws2_32)
-else ()
-  # Is it in the default link?
-  CHECK_FUNCTION_EXISTS(getaddrinfo HAVE_GETADDRINFO)
-  if (NOT (HAVE_GETADDRINFO EQUAL 1))
-    CHECK_LIBRARY_EXISTS(socket getaddrinfo "" HAVE_GETADDRINFO2)
-    if (HAVE_GETADDRINFO2 EQUAL 1)
-      set(SOCKET_LIBRARIES socket)
-    else ()
-      CHECK_LIBRARY_EXISTS("socket;nsl" getaddrinfo "" HAVE_GETADDRINFO3)
-      if (HAVE_GETADDRINFO3 EQUAL 1)
-        set(SOCKET_LIBRARIES socket nsl)
-      else ()
-        message(FATAL_ERROR "Cannot find name resolution library (containing symbol getaddrinfo)")
-      endif ()
-    endif ()
-  endif ()
-
-  set(CMAKE_REQUIRED_LIBRARIES ${SOCKET_LIBRARIES})
-  CHECK_FUNCTION_EXISTS(socket HAVE_SOCKET)
-  if (NOT HAVE_SOCKET EQUAL 1)
-    CHECK_LIBRARY_EXISTS(socket socket "" HAVE_SOCKET2)
-    if (NOT HAVE_SOCKET2 EQUAL 1)
-      set(SOCKET_LIBRARIES socket ${SOCKET_LIBRARIES})
-    else ()
-      CHECK_LIBRARY_EXISTS("socket;nsl" socket "" HAVE_SOCKET3)
-      if (HAVE_SOCKET3 EQUAL 1)
-        set(SOCKET_LIBRARIES socket nsl ${SOCKET_LIBRARIES})
-      else ()
-        message(FATAL_ERROR "Cannot find socket library (containing symbol socket)")
-      endif ()
-    endif ()
-  endif ()
-endif ()
-cmake_pop_check_state()
-
-cmake_push_check_state()
-set(CMAKE_REQUIRED_LIBRARIES ${SOCKET_LIBRARIES})
-if (WIN32)
-  check_symbol_exists(htonll Winsock2.h HAVE_HTONLL)
-else (WIN32)
-  check_symbol_exists(htonll arpa/inet.h HAVE_HTONLL)
-endif (WIN32)
-cmake_pop_check_state()
-
-check_library_exists(rt clock_gettime "time.h" CLOCK_GETTIME_NEEDS_LIBRT)
-if (CLOCK_GETTIME_NEEDS_LIBRT)
-  set(LIBRT rt)
-endif()
 
 option(REGENERATE_AMQP_FRAMING "Regenerate amqp_framing.h/amqp_framing.c sources (for developer use)" OFF)
 mark_as_advanced(REGENERATE_AMQP_FRAMING)
@@ -200,7 +140,7 @@ if (REGENERATE_AMQP_FRAMING)
   find_path(AMQP_CODEGEN_DIR
     amqp_codegen.py
     PATHS ${CMAKE_CURRENT_SOURCE_DIR}/codegen
-          ${CMAKE_CURRENT_SOURCE_DIR}/rabbitmq-codegen 
+          ${CMAKE_CURRENT_SOURCE_DIR}/rabbitmq-codegen
           ${CMAKE_CURRENT_SOURCE_DIR}/../rabbitmq-codegen
           DOC "Path to directory containing amqp_codegen.py (rabbitmq-codegen)"
           NO_DEFAULT_PATH
@@ -213,73 +153,21 @@ if (REGENERATE_AMQP_FRAMING)
   endif()
 endif (REGENERATE_AMQP_FRAMING)
 
-find_package(POPT)
-find_package(XmlTo)
 find_package(Doxygen)
-
-if (POPT_FOUND AND XmlTo_FOUND)
-  set(DO_DOCS ON)
-endif()
-
-find_package(Threads)
 
 option(BUILD_SHARED_LIBS "Build rabbitmq-c as a shared library" ON)
 option(BUILD_STATIC_LIBS "Build rabbitmq-c as a static library" OFF)
 
 option(BUILD_EXAMPLES "Build Examples" ON)
-option(BUILD_TOOLS "Build Tools (requires POPT Library)" ${POPT_FOUND})
-option(BUILD_TOOLS_DOCS "Build man pages for Tools (requires xmlto)" ${DO_DOCS})
 option(BUILD_TESTS "Build tests (run tests with make test)" ON)
 option(BUILD_API_DOCS "Build Doxygen API docs" ${DOXYGEN_FOUND})
-option(ENABLE_SSL_SUPPORT "Enable SSL support" ON)
-option(ENABLE_THREAD_SAFETY "Enable thread safety when using OpenSSL" ${Threads_FOUND})
-
-set(SSL_ENGINE "OpenSSL" CACHE STRING "SSL Backend to use, valid options: OpenSSL, cyaSSL, GnuTLS, PolarSSL")
-mark_as_advanced(SSL_ENGINE)
-
-if (ENABLE_SSL_SUPPORT)
-  if (SSL_ENGINE STREQUAL "OpenSSL")
-    find_package(OpenSSL 0.9.8 REQUIRED)
-
-  elseif (SSL_ENGINE STREQUAL "cyaSSL")
-    find_package(cyaSSL REQUIRED)
-
-  elseif (SSL_ENGINE STREQUAL "GnuTLS")
-    find_package(GnuTLS REQUIRED)
-
-  elseif (SSL_ENGINE STREQUAL "PolarSSL")
-    find_package(PolarSSL REQUIRED)
-
-  else()
-    message(FATAL_ERROR "Unsupported SSL_ENGINE ${SSL_ENGINE}, valid engines: OpenSSL, cyaSSL, GnuTLS, or PolarSSL")
-  endif()
-endif()
 
 if (NOT BUILD_SHARED_LIBS AND NOT BUILD_STATIC_LIBS)
     message(FATAL_ERROR "One or both of BUILD_SHARED_LIBS or BUILD_STATIC_LIBS must be set to ON to build")
 endif()
 
-if (WIN32 AND BUILD_STATIC_LIBS)
-  message(FATAL_ERROR "The rabbitmq-c library cannot be built as a static library on Win32. Set BUILD_STATIC_LIBS=OFF to get around this.")
-endif()
-
-add_subdirectory(librabbitmq)
-
-if (BUILD_EXAMPLES)
-  add_subdirectory(examples)
-endif ()
-
-if (BUILD_TOOLS)
-  if (POPT_FOUND)
-    add_subdirectory(tools)
-  else ()
-    message(WARNING "POpt library was not found. Tools will not be built")
-  endif ()
-endif ()
-
 if (BUILD_TESTS)
   enable_testing()
-  add_subdirectory(tests)
 endif (BUILD_TESTS)
 
 if (BUILD_API_DOCS)
@@ -313,7 +201,6 @@ set(exec_prefix "\${prefix}")
 set(libdir "\${exec_prefix}/${CMAKE_INSTALL_LIBDIR}")
 set(includedir "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
 
-configure_file(cmake/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/librabbitmq/config.h)
 configure_file(librabbitmq.pc.in ${CMAKE_CURRENT_BINARY_DIR}/librabbitmq.pc @ONLY)
 
 install(FILES

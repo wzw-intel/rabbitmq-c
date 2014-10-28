@@ -14,9 +14,6 @@ env:
    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
    #   via the "travis encrypt" command using the project repo's public key
    - secure: "gDwqo3jHj+HHGzFKnxL/nwZhbVeh2pItw0TbeaHcLtWubUZaf85ViEQRaXPyfnbG7l0OEQq+PjyhKAfvViVq2NP0lGeeu4VM5uMZJhsCLN594BJr39Y4XzOapg0O8mEMhQ0DU2u1Zo4LMgEcRz67aosVQOj6QV30tOzp9fnxn9U="
-  matrix:
-   - BUILD_SYSTEM=cmake
-   - BUILD_SYSTEM=autotools
 
 # Make sure CMake is installed
 install:
@@ -29,19 +26,8 @@ before_script:
 # Run the Build script
 script:
   - if [ ${COVERITY_SCAN_BRANCH} != 1 ]; then
-      case $BUILD_SYSTEM in
-        cmake)
-          cmake .. -DCMAKE_INSTALL_PREFIX=`pwd`/_install &&
-          cmake --build . --target install
-          ;;
-        autotools)
-          cd .. &&
-          autoreconf -i &&
-          cd _build &&
-          ../configure --prefix=`pwd`/_install &&
-          make install
-          ;;
-      esac ;
+      cmake .. -DCMAKE_INSTALL_PREFIX=`pwd`/_install &&
+      cmake --build . --target install
     fi
 
 # Run Tests

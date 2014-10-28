@@ -27,7 +27,7 @@ before_script:
 script:
   - if [ ${COVERITY_SCAN_BRANCH} != 1 ]; then
       cmake .. -DCMAKE_INSTALL_PREFIX=`pwd`/_install &&
-      cmake --build . --target install
+      cmake --build . --target install ;
     fi
 
 # Run Tests

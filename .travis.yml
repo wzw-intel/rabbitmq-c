@@ -37,6 +37,9 @@ matrix:
     - compiler: clang
       os: osx
       env: CONFIG=cmake
+    - compiler: clang
+      os: osx
+      env: CONFIG=ios
 
 before_install:
   # ugly hack; if running a coverity scan abort all except the 1st build

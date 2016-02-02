@@ -37,6 +37,14 @@ build_scan-build() {
   scan-build-3.7 make install
 }
 
+build_ios() {
+  mkdir $PWD/_build && cd $PWD/_build
+  git clone https://github.com/cristeab/ios-cmake.git
+  cmake .. -DCMAKE_TOOLCHAIN_FILE=ios-cmake/toolchain/iOS.cmake \
+  -DIOS_PLATFORM=SIMULATOR -DCMAKE_BUILD_TYPE=Debug -DENABLE_SSL_SUPPORT=OFF
+  cmake --build .
+}
+
 if [ "$#" -ne 1 ]; then
   echo "Usage: $0 {autotools|cmake|asan|tsan|scan-build}"
   exit 1

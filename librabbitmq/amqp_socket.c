@@ -318,11 +318,20 @@ start_poll:
 
 start_select:
   FD_ZERO(&fds);
+#ifdef _WIN32
+  FD_SET((SOCKET)fd, &fds);
+#else
   FD_SET(fd, &fds);
+#endif
+
 
   if (event & AMQP_SF_POLLERR) {
     FD_ZERO(&exceptfds);
+#ifdef _WIN32
+    FD_SET((SOCKET)fd, &exceptfds);
+#else
     FD_SET(fd, &exceptfds);
+#endif
     exceptfdsp = &exceptfds;
   } else {
     exceptfdsp = NULL;

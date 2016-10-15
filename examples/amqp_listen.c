@@ -100,7 +100,10 @@ int main(int argc, char const *const *argv)
                   amqp_empty_table);
   die_on_amqp_error(amqp_get_rpc_reply(conn), "Binding queue");
 
-  amqp_basic_consume(conn, 1, queuename, amqp_empty_bytes, 0, 1, 0, amqp_empty_table);
+  amqp_basic_qos(conn, 1, 0, 1, 0);
+  die_on_amqp_error(amqp_get_rpc_reply(conn), "Setting QoS");
+
+  amqp_basic_consume(conn, 1, queuename, amqp_empty_bytes, 0, 0, 0, amqp_empty_table);
   die_on_amqp_error(amqp_get_rpc_reply(conn), "Consuming");
 
   {
@@ -129,6 +132,11 @@ int main(int argc, char const *const *argv)
       printf("----\n");
 
       amqp_dump(envelope.message.body.bytes, envelope.message.body.len);
+
+      status = amqp_basic_ack(conn, 1, envelope.delivery_tag, 0);
+      if (AMQP_STATUS_OK != status) {
+        die("failed to acknowledge message");
+      }
 
       amqp_destroy_envelope(&envelope);
     }

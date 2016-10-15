@@ -34,6 +34,7 @@
  * ***** END LICENSE BLOCK *****
  */
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -84,6 +85,12 @@ int main(int argc, char const *const *argv)
   die_on_amqp_error(amqp_get_rpc_reply(conn), "Opening channel");
 
   {
+    amqp_confirm_select_ok_t* confirm = amqp_confirm_select(conn, 1);
+    if (confirm == NULL) {
+      die_on_amqp_error(amqp_get_rpc_reply(conn), "enabling confirms");
+    }
+  }
+  {
     amqp_basic_properties_t props;
     props._flags = AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
     props.content_type = amqp_cstring_bytes("text/plain");
@@ -97,6 +104,21 @@ int main(int argc, char const *const *argv)
                                     &props,
                                     amqp_cstring_bytes(messagebody)),
                  "Publishing");
+  }
+  {
+    amqp_frame_t ack_frame;
+    amqp_basic_ack_t *ack_method;
+    status = amqp_simple_wait_frame(conn, &ack_frame);
+    if (status != AMQP_STATUS_OK) {
+      die_on_error(status, "Waiting for ack");
+    }
+    if (ack_frame.channel != 1 || ack_frame.frame_type != AMQP_FRAME_METHOD ||
+        ack_frame.payload.method.id != AMQP_BASIC_ACK_METHOD) {
+      die("received unexpected method");
+    }
+    ack_method = (amqp_basic_ack_t *)ack_frame.payload.method.decoded;
+    printf("Ack received for envelope: %" PRIu64 " multiple %d\n",
+           ack_method->delivery_tag, ack_method->multiple);
   }
 
   die_on_amqp_error(amqp_channel_close(conn, 1, AMQP_REPLY_SUCCESS), "Closing channel");

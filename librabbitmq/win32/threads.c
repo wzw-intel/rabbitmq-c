@@ -25,6 +25,10 @@
 
 #include <stdlib.h>
 
+#ifdef _MSC_VER
+# pragma warning( disable: 4100 )  /* unreferenced formal parameter */
+#endif
+
 DWORD
 pthread_self(void)
 {

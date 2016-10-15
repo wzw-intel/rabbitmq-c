@@ -42,6 +42,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef _MSC_VER
+# pragma warning( disable: 4100 )  /* unreferenced formal parameter */
+#endif
+
 struct amqp_tcp_socket_t {
   const struct amqp_socket_class_t *klass;
   int sockfd;

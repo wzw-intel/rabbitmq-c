@@ -34,6 +34,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+# pragma warning( disable: 4100 )  /* unreferenced formal parameter */
+#endif
+
 static
 int amqp_basic_properties_clone(amqp_basic_properties_t *original,
                                 amqp_basic_properties_t *clone,

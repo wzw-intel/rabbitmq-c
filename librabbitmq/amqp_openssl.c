@@ -45,6 +45,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+# pragma warning( disable: 4100 )  /* unreferenced formal parameter */
+#endif
 
 static int initialize_openssl(void);
 static int destroy_openssl(void);

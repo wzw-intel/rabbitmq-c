@@ -71,3 +71,5 @@ target_link_libraries(amqps_bind ${RMQ_LIBRARY_TARGET})
 add_executable(amqps_listenq amqps_listenq.c ${COMMON_SRCS})
 target_link_libraries(amqps_listenq ${RMQ_LIBRARY_TARGET})
 endif (ENABLE_SSL_SUPPORT)
+
+add_subdirectory(tutorial-1-hello-world)
